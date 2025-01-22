@@ -37,8 +37,9 @@ class WordRangeActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 val adapter = CustomAdapter(
+                    category.id,
                     this@WordRangeActivity,
-                    startToEnd
+                    startToEnd,
                 )
                 listViewRanges.adapter = adapter
 

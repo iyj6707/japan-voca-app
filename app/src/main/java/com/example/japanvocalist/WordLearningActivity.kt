@@ -6,10 +6,12 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.japanvocalist.util.buildIndexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.properties.Delegates
 
+@SuppressLint("NewApi")
 class WordLearningActivity : AppCompatActivity() {
 
     private lateinit var textViewKanji: TextView
@@ -21,14 +23,19 @@ class WordLearningActivity : AppCompatActivity() {
     private lateinit var buttonKnow: Button
     private lateinit var buttonBack: Button
     private lateinit var db: WordRoomDatabase
-    private lateinit var indexKey: String
+
+    private lateinit var category: CategoryDto
+    private var offset by Delegates.notNull<Int>()
+    private var limit by Delegates.notNull<Int>()
 
     private var currentIndex by Delegates.notNull<Int>()
-
     private var wordById = mapOf<Int, Word>()
     private var indexList = mutableListOf<Int>()
 
-    @SuppressLint("NewApi")
+    private val indexKey: String by lazy {
+        buildIndexKey(category.id, offset)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_learning)
@@ -44,12 +51,11 @@ class WordLearningActivity : AppCompatActivity() {
         buttonKnow = findViewById(R.id.buttonKnow)
         buttonBack = findViewById(R.id.buttonBack)
 
-        val category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java)!!
-        val offset = intent.getIntExtra("OFFSET", 0)
-        val limit = intent.getIntExtra("LIMIT", 10)
+        category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java) ?: return
+        offset = intent.getIntExtra("OFFSET", 0)
+        limit = intent.getIntExtra("LIMIT", 10)
 
-        val preferences = getSharedPreferences("WordLearningPrefs", MODE_PRIVATE)
-        indexKey = "indexList_${category.id}_$offset"
+        val preferences = getSharedPreferences(PREFERENCE_KEY, MODE_PRIVATE)
         val indexSet = preferences.getStringSet(indexKey, setOf()) ?: setOf()
         indexList += indexSet.map { it.toInt() }
 
@@ -75,6 +81,15 @@ class WordLearningActivity : AppCompatActivity() {
         buttonBack.setOnClickListener {
             finish()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        val preferences = getSharedPreferences(PREFERENCE_KEY, MODE_PRIVATE)
+        indexList.add(0, currentIndex)
+        preferences.edit()
+            .putStringSet(indexKey, indexList.map { it.toString() }.toSet())
+            .apply()
     }
 
     private fun loadWords(category: CategoryDto, offset: Int, limit: Int) {
@@ -110,14 +125,5 @@ class WordLearningActivity : AppCompatActivity() {
         textViewKanji.text = "모든 단어를 암기했습니다!"
         textViewHiragana.text = ""
         textViewKorean.text = ""
-    }
-
-    override fun onPause() {
-        super.onPause()
-        val preferences = getSharedPreferences("WordLearningPrefs", MODE_PRIVATE)
-        indexList.add(0, currentIndex)
-        preferences.edit()
-            .putStringSet(indexKey, indexList.map { it.toString() }.toSet())
-            .apply()
     }
 }

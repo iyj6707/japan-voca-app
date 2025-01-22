@@ -8,8 +8,10 @@ import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
+import com.example.japanvocalist.util.buildIndexKey
 
 class CustomAdapter(
+    private val categoryId: Int,
     context: Context,
     ranges: List<Pair<Int, Int>>,
 ) : ArrayAdapter<Pair<Int, Int>>(context, 0, ranges) {
@@ -31,9 +33,10 @@ class CustomAdapter(
                 when (menuItem.itemId) {
                     R.id.action_reset -> {
                         val sharedPref =
-                            context.getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+                            context.getSharedPreferences(PREFERENCE_KEY, Context.MODE_PRIVATE)
                         with(sharedPref.edit()) {
-                            remove("your_preference_key")
+                            val indexKey = buildIndexKey(categoryId, item.first)
+                            remove(indexKey)
                             apply()
                         }
                         true
