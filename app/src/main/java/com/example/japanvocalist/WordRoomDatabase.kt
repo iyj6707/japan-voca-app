@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.japanvocalist.util.populateDatabaseFromCSV
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,57 +42,14 @@ abstract class WordRoomDatabase : RoomDatabase() {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
-                        populateDatabaseFromCSV(context, database.wordDao(), database.categoryDao())
-                    }
-                }
-            }
-        }
-
-        private suspend fun populateDatabaseFromCSV(
-            context: Context,
-            wordDao: WordDao,
-            categoryDao: CategoryDao
-        ) {
-            val tempWords = mutableListOf<TempWord>()
-            context.resources.openRawResource(R.raw.words).bufferedReader().useLines { lines ->
-                lines.forEach { line ->
-                    val parts = line.split(',')
-                    if (parts.size >= 3) {
-                        tempWords.add(
-                            TempWord(
-                                hiragana = parts[0],
-                                kanji = parts[1],
-                                korean = parts[2],
-                                categoryName = parts[3]
-                            )
+                        populateDatabaseFromCSV(
+                            context.resources.openRawResource(R.raw.words).bufferedReader(),
+                            database.wordDao(),
+                            database.categoryDao()
                         )
                     }
                 }
             }
-            val categoryNames = tempWords.map { it.categoryName }.distinct()
-            categoryNames.forEach { categoryName ->
-                categoryDao.insert(Category(name = categoryName))
-            }
-            val categoryNameById = categoryDao.getAll().associateBy { it.name }
-
-            tempWords.forEach { tempWord ->
-                val categoryId = categoryNameById[tempWord.categoryName]?.id ?: 0
-                wordDao.insert(
-                    Word(
-                        hiragana = tempWord.hiragana,
-                        kanji = tempWord.kanji,
-                        korean = tempWord.korean,
-                        categoryId = categoryId
-                    )
-                )
-            }
         }
-
-        class TempWord(
-            val hiragana: String,
-            val kanji: String,
-            val korean: String,
-            val categoryName: String
-        )
     }
 }
