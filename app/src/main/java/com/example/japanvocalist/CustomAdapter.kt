@@ -28,7 +28,7 @@ class CustomAdapter(
 
         iconMenu.setOnClickListener {
             val popup = PopupMenu(context, iconMenu)
-            popup.inflate(R.menu.word_range_menu_options)
+            popup.inflate(R.menu.word_range_list_menu_options)
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.action_reset -> {
