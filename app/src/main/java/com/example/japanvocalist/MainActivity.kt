@@ -5,7 +5,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.ArrayAdapter
 import android.widget.ListView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -18,14 +17,8 @@ import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
-    private val openCsvFileLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let { lifecycleScope.launch { insertCsvFileToDB(it) } }
-    }
-
     private lateinit var db: WordRoomDatabase
-    private lateinit var listViewAdapter: ArrayAdapter<String>
+    private lateinit var categoryAdapter: CategoryAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,14 +31,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListView() {
-        val listViewLevels: ListView = findViewById(R.id.listViewLevels)
-        listViewAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, mutableListOf())
-        listViewLevels.adapter = listViewAdapter
+        val categoryListView: ListView = findViewById(R.id.categoryListView)
+        categoryAdapter = CategoryAdapter(this, mutableListOf())
+        categoryListView.adapter = categoryAdapter
 
-        listViewLevels.setOnItemClickListener { _, _, position, _ ->
-            val categoryDto = (listViewLevels.getItemAtPosition(position) as? Category)?.let {
+        categoryListView.setOnItemClickListener { _, _, position, _ ->
+            val categoryDto = (categoryListView.getItemAtPosition(position) as? Category)?.let {
                 CategoryDto(it.id, it.name)
             }
+            println("Category selected: $categoryDto")
             categoryDto?.let {
                 val intent = Intent(this@MainActivity, WordRangeActivity::class.java)
                 intent.putExtra("CATEGORY", categoryDto)
@@ -63,9 +57,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateListView(categories: List<Category>) {
-        listViewAdapter.clear()
-        listViewAdapter.addAll(categories.map { it.name })
-        listViewAdapter.notifyDataSetChanged()
+        categoryAdapter.clear()
+        categoryAdapter.addAll(categories)
+        categoryAdapter.notifyDataSetChanged()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -82,6 +76,12 @@ class MainActivity : AppCompatActivity() {
 
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private val openCsvFileLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { lifecycleScope.launch { insertCsvFileToDB(it) } }
     }
 
     private suspend fun insertCsvFileToDB(uri: Uri) {
