@@ -13,7 +13,10 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories ORDER BY name ASC")
     fun getAll(): Flow<List<Category>>
-
+    
     @Query("SELECT id FROM categories WHERE name = :name")
     suspend fun getIdByName(name: String): Int
+
+    @Query("DELETE FROM categories WHERE id = :id")
+    suspend fun deleteById(id: Int)
 }

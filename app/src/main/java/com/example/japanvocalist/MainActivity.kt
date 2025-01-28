@@ -10,7 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.japanvocalist.util.populateDatabaseFromCSV
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -32,14 +34,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupListView() {
         val categoryListView: ListView = findViewById(R.id.categoryListView)
-        categoryAdapter = CategoryAdapter(this, mutableListOf())
+        categoryAdapter = CategoryAdapter(this, mutableListOf(), this::deleteCategory)
         categoryListView.adapter = categoryAdapter
 
         categoryListView.setOnItemClickListener { _, _, position, _ ->
             val categoryDto = (categoryListView.getItemAtPosition(position) as? Category)?.let {
                 CategoryDto(it.id, it.name)
             }
-            println("Category selected: $categoryDto")
             categoryDto?.let {
                 val intent = Intent(this@MainActivity, WordRangeActivity::class.java)
                 intent.putExtra("CATEGORY", categoryDto)
@@ -60,6 +61,16 @@ class MainActivity : AppCompatActivity() {
         categoryAdapter.clear()
         categoryAdapter.addAll(categories)
         categoryAdapter.notifyDataSetChanged()
+    }
+
+    private fun deleteCategory(category: Category) {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                db.categoryDao().deleteById(category.id)
+            }
+            categoryAdapter.remove(category)
+            categoryAdapter.notifyDataSetChanged()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

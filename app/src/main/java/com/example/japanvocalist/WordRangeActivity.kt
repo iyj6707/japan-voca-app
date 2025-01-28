@@ -27,17 +27,17 @@ class WordRangeActivity : AppCompatActivity() {
 
         buttonBack = findViewById(R.id.buttonBack)
         val listViewRanges: ListView = findViewById(R.id.listViewRanges)
-        val category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java)!!
+        val categoryDto = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java)!!
 
         CoroutineScope(Dispatchers.IO).launch {
-            val wordCountByCategory = db.wordDao().getCountByCategory(category.id)
+            val wordCountByCategory = db.wordDao().getCountByCategory(categoryDto.id)
             val startToEnd = (0 until wordCountByCategory step RANGE_STEP).map {
                 it to minOf(it + RANGE_STEP, wordCountByCategory)
             }
 
             withContext(Dispatchers.Main) {
                 val adapter = CustomAdapter(
-                    category.id,
+                    categoryDto.id,
                     this@WordRangeActivity,
                     startToEnd,
                 )
@@ -46,7 +46,7 @@ class WordRangeActivity : AppCompatActivity() {
                 listViewRanges.setOnItemClickListener { _, _, position, _ ->
                     val range = startToEnd[position]
                     val intent = Intent(this@WordRangeActivity, WordLearningActivity::class.java)
-                    intent.putExtra("CATEGORY", category)
+                    intent.putExtra("CATEGORY", categoryDto)
                     intent.putExtra("OFFSET", range.first)
                     intent.putExtra("LIMIT", RANGE_STEP)
                     startActivity(intent)

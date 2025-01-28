@@ -4,7 +4,7 @@ import com.example.japanvocalist.Category
 import com.example.japanvocalist.CategoryDao
 import com.example.japanvocalist.Word
 import com.example.japanvocalist.WordDao
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.first
 import java.io.BufferedReader
 
 suspend fun populateDatabaseFromCSV(
@@ -32,14 +32,14 @@ suspend fun populateDatabaseFromCSV(
     categoryNames.forEach { categoryName ->
         categoryDao.insert(Category(name = categoryName))
     }
-    val categoryNameById = categoryDao.getAll().toList().flatten().associateBy { it.name }
+    val categoryNameById = categoryDao.getAll().first().associateBy { it.name }
 
     tempWords.forEach { tempWord ->
         val categoryId = categoryNameById[tempWord.categoryName]?.id ?: 0
         wordDao.insert(
             Word(
-                hiragana = tempWord.hiragana,
                 kanji = tempWord.kanji,
+                hiragana = tempWord.hiragana,
                 korean = tempWord.korean,
                 categoryId = categoryId
             )
@@ -48,8 +48,8 @@ suspend fun populateDatabaseFromCSV(
 }
 
 class TempWord(
-    val hiragana: String,
     val kanji: String,
+    val hiragana: String,
     val korean: String,
     val categoryName: String
 )
