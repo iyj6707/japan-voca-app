@@ -48,7 +48,6 @@ class RangeAdapter(
                                 preferences.remove(intPreferencesKey(knownWordsKey))
                             }
                         }
-
                         true
                     }
 

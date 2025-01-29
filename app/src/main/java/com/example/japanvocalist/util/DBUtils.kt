@@ -34,7 +34,7 @@ suspend fun populateDatabaseFromCSV(
     }
     val categoryNameById = categoryDao.getAll().first().associateBy { it.name }
 
-    tempWords.forEach { tempWord ->
+    tempWords.shuffled().forEach { tempWord ->
         val categoryId = categoryNameById[tempWord.categoryName]?.id ?: 0
         wordDao.insert(
             Word(

@@ -159,6 +159,10 @@ class WordLearningActivity : AppCompatActivity() {
 
     private fun saveProgress() {
         lifecycleScope.launch(Dispatchers.IO) {
+            // TODO : 순서만 다르게 한 set을 저장할 방법이 없어서 임시방편으로 짠 코드
+            dataStore.edit { preferences ->
+                preferences.remove(stringSetPreferencesKey(indexKey))
+            }
             dataStore.edit { preferences ->
                 preferences[stringSetPreferencesKey(indexKey)] =
                     indexList.map { it.toString() }.toSet()
