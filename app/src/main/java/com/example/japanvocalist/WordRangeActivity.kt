@@ -57,7 +57,7 @@ class WordRangeActivity : AppCompatActivity() {
             }
 
             withContext(Dispatchers.Main) {
-                val adapter = CustomAdapter(
+                val adapter = RangeAdapter(
                     categoryId,
                     this@WordRangeActivity,
                     startToEnd

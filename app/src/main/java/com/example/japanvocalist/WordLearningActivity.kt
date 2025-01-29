@@ -7,6 +7,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.japanvocalist.util.buildIndexKey
+import com.example.japanvocalist.util.buildKnownWordsKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.properties.Delegates
@@ -22,18 +23,22 @@ class WordLearningActivity : AppCompatActivity() {
     private lateinit var buttonDontKnow: Button
     private lateinit var buttonKnow: Button
     private lateinit var buttonBack: Button
+    private lateinit var textViewCounter: TextView
     private lateinit var db: WordRoomDatabase
-
     private lateinit var category: CategoryDto
+
     private var offset by Delegates.notNull<Int>()
     private var limit by Delegates.notNull<Int>()
-
     private var currentIndex by Delegates.notNull<Int>()
     private var wordById = mapOf<Int, Word>()
     private var indexList = mutableListOf<Int>()
+    private var knownWordsCount = 0
 
     private val indexKey: String by lazy {
         buildIndexKey(category.id, offset)
+    }
+    private val knownWordsKey: String by lazy {
+        buildKnownWordsKey(category.id, offset)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +55,7 @@ class WordLearningActivity : AppCompatActivity() {
         buttonDontKnow = findViewById(R.id.buttonDontKnow)
         buttonKnow = findViewById(R.id.buttonKnow)
         buttonBack = findViewById(R.id.buttonBack)
+        textViewCounter = findViewById(R.id.textViewCounter)
 
         category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java) ?: return
         offset = intent.getIntExtra("OFFSET", 0)
@@ -58,6 +64,7 @@ class WordLearningActivity : AppCompatActivity() {
         val preferences = getSharedPreferences(PREFERENCE_KEY, MODE_PRIVATE)
         val indexSet = preferences.getStringSet(indexKey, setOf()) ?: setOf()
         indexList += indexSet.map { it.toInt() }
+        knownWordsCount = preferences.getInt(knownWordsKey, 0)
 
         loadWords(category, offset, limit)
 
@@ -75,6 +82,8 @@ class WordLearningActivity : AppCompatActivity() {
         }
 
         buttonKnow.setOnClickListener {
+            knownWordsCount++
+            updateCounter()
             showNextWord()
         }
 
@@ -89,6 +98,7 @@ class WordLearningActivity : AppCompatActivity() {
         indexList.add(0, currentIndex)
         preferences.edit()
             .putStringSet(indexKey, indexList.map { it.toString() }.toSet())
+            .putInt(knownWordsKey, knownWordsCount)
             .apply()
     }
 
@@ -102,9 +112,14 @@ class WordLearningActivity : AppCompatActivity() {
                 if (indexList.isEmpty()) {
                     indexList.addAll(words.map { it.id })
                 }
+                updateCounter()
                 showNextWord()
             }
         }
+    }
+
+    private fun updateCounter() {
+        textViewCounter.text = "$knownWordsCount/$limit"
     }
 
     private fun showNextWord() {

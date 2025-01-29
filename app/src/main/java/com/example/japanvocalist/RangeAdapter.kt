@@ -9,8 +9,9 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import com.example.japanvocalist.util.buildIndexKey
+import com.example.japanvocalist.util.buildKnownWordsKey
 
-class CustomAdapter(
+class RangeAdapter(
     private val categoryId: Int,
     context: Context,
     ranges: List<Pair<Int, Int>>,
@@ -36,7 +37,9 @@ class CustomAdapter(
                             context.getSharedPreferences(PREFERENCE_KEY, Context.MODE_PRIVATE)
                         with(sharedPref.edit()) {
                             val indexKey = buildIndexKey(categoryId, item.first)
+                            val knownWordsKey = buildKnownWordsKey(categoryId, item.first)
                             remove(indexKey)
+                            remove(knownWordsKey)
                             apply()
                         }
                         true
