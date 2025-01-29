@@ -8,8 +8,15 @@ import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.example.japanvocalist.MainActivity.Companion.dataStore
 import com.example.japanvocalist.util.buildIndexKey
 import com.example.japanvocalist.util.buildKnownWordsKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RangeAdapter(
     private val categoryId: Int,
@@ -33,15 +40,15 @@ class RangeAdapter(
             popup.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.action_reset -> {
-                        val sharedPref =
-                            context.getSharedPreferences(PREFERENCE_KEY, Context.MODE_PRIVATE)
-                        with(sharedPref.edit()) {
-                            val indexKey = buildIndexKey(categoryId, item.first)
-                            val knownWordsKey = buildKnownWordsKey(categoryId, item.first)
-                            remove(indexKey)
-                            remove(knownWordsKey)
-                            apply()
+                        CoroutineScope(Dispatchers.IO).launch {
+                            context.dataStore.edit { preferences ->
+                                val indexKey = buildIndexKey(categoryId, item.first)
+                                val knownWordsKey = buildKnownWordsKey(categoryId, item.first)
+                                preferences.remove(stringSetPreferencesKey(indexKey))
+                                preferences.remove(intPreferencesKey(knownWordsKey))
+                            }
                         }
+
                         true
                     }
 

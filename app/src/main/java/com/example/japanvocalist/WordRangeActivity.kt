@@ -11,8 +11,14 @@ import android.widget.EditText
 import android.widget.ListView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.lifecycle.lifecycleScope
+import com.example.japanvocalist.MainActivity.Companion.dataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.properties.Delegates
@@ -31,15 +37,17 @@ class WordRangeActivity : AppCompatActivity() {
         setContentView(R.layout.activity_word_range)
 
         db = WordRoomDatabase.getDatabase(applicationContext)
-
         buttonBack = findViewById(R.id.buttonBack)
         listViewRanges = findViewById(R.id.listViewRanges)
         categoryDto = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java)!!
 
-        val preferences = getSharedPreferences(PREFERENCE_KEY, MODE_PRIVATE)
-        rangeStep = preferences.getInt(buildRangeStepKey(categoryDto.id), 50)
+        lifecycleScope.launch {
+            rangeStep = dataStore.data.map {
+                it[intPreferencesKey(buildRangeStepKey(categoryDto.id))] ?: 50
+            }.first()
 
-        updateListViewRanges(categoryDto.id)
+            updateListViewRanges(categoryDto.id)
+        }
 
         buttonBack.setOnClickListener {
             finish()
@@ -105,7 +113,9 @@ class WordRangeActivity : AppCompatActivity() {
             val inputText = input.text.toString()
             val newRangeStep = inputText.toIntOrNull()
             if (newRangeStep != null && newRangeStep > 0) {
-                setNewRangeStep(newRangeStep)
+                CoroutineScope(Dispatchers.IO).launch {
+                    setNewRangeStep(newRangeStep)
+                }
             }
             dialog.dismiss()
         }
@@ -117,12 +127,13 @@ class WordRangeActivity : AppCompatActivity() {
         builder.show()
     }
 
-    private fun setNewRangeStep(newRangeStep: Int) {
+    private suspend fun setNewRangeStep(newRangeStep: Int) {
         rangeStep = newRangeStep
-        val preferences = getSharedPreferences(PREFERENCE_KEY, MODE_PRIVATE)
-        preferences.edit()
-            .putInt(buildRangeStepKey(categoryDto.id), rangeStep)
-            .apply()
+        dataStore.edit { preferences ->
+            val key = buildRangeStepKey(categoryDto.id)
+            preferences[intPreferencesKey(key)] = newRangeStep
+        }
+
         updateListViewRanges(categoryDto.id)
     }
 

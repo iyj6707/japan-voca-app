@@ -36,7 +36,6 @@ class CategoryAdapter(
         val category = getItem(position)
         category?.let {
             viewHolder.nameTextView.text = it.name
-
             viewHolder.moreOptions.setOnClickListener { v ->
                 showPopupMenu(v, it)
             }

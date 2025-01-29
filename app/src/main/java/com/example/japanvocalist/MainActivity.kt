@@ -1,5 +1,6 @@
 package com.example.japanvocalist
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,6 +9,7 @@ import android.view.MenuItem
 import android.widget.ListView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
 import com.example.japanvocalist.util.populateDatabaseFromCSV
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +20,9 @@ import java.io.InputStreamReader
 
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        val Context.dataStore by preferencesDataStore(name = "settings")
+    }
 
     private lateinit var db: WordRoomDatabase
     private lateinit var categoryAdapter: CategoryAdapter
