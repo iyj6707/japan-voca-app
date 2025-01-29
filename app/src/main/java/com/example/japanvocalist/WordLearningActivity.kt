@@ -16,7 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.properties.Delegates
 
 @SuppressLint("NewApi")
@@ -37,23 +36,32 @@ class WordLearningActivity : AppCompatActivity() {
     private var offset by Delegates.notNull<Int>()
     private var limit by Delegates.notNull<Int>()
     private var currentIndex by Delegates.notNull<Int>()
+
     private var wordById = mapOf<Int, Word>()
     private var knownWordsCount = 0
-
     private val indexList = mutableListOf<Int>()
-    private val indexKey: String by lazy {
-        buildIndexKey(category.id, offset)
-    }
-    private val knownWordsKey: String by lazy {
-        buildKnownWordsKey(category.id, offset)
-    }
+
+    private val indexKey: String by lazy { buildIndexKey(category.id, offset) }
+    private val knownWordsKey: String by lazy { buildKnownWordsKey(category.id, offset) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_learning)
+        initializeUIComponents()
+        initializeWordDatabase()
 
-        db = WordRoomDatabase.getDatabase(applicationContext)
+        category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java) ?: return
+        offset = intent.getIntExtra("OFFSET", 0)
+        limit = intent.getIntExtra("LIMIT", 10)
 
+        lifecycleScope.launch(Dispatchers.IO) {
+            loadWords()
+        }
+
+        setupButtonListeners()
+    }
+
+    private fun initializeUIComponents() {
         textViewKanji = findViewById(R.id.textViewKanji)
         textViewHiragana = findViewById(R.id.textViewHiragana)
         textViewKorean = findViewById(R.id.textViewKorean)
@@ -63,48 +71,44 @@ class WordLearningActivity : AppCompatActivity() {
         buttonKnow = findViewById(R.id.buttonKnow)
         buttonBack = findViewById(R.id.buttonBack)
         textViewCounter = findViewById(R.id.textViewCounter)
-
-        category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java) ?: return
-        offset = intent.getIntExtra("OFFSET", 0)
-        limit = intent.getIntExtra("LIMIT", 10)
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            loadWords(category, offset, limit)
-        }
-
-        buttonShowHiragana.setOnClickListener {
-            textViewHiragana.text = wordById[currentIndex]?.hiragana ?: ""
-        }
-
-        buttonShowKorean.setOnClickListener {
-            textViewKorean.text = wordById[currentIndex]?.korean ?: ""
-        }
-
-        buttonDontKnow.setOnClickListener {
-            indexList.add(currentIndex)
-            showWord(isNext = true)
-        }
-
-        buttonKnow.setOnClickListener {
-            knownWordsCount++
-            updateCounter()
-            showWord(isNext = true)
-        }
-
-        buttonBack.setOnClickListener {
-            finish()
-        }
     }
 
-    private suspend fun loadWords(category: CategoryDto, offset: Int, limit: Int) {
-        val indexSet = dataStore.data.map {
-            it[stringSetPreferencesKey(indexKey)] ?: emptySet()
-        }.first()
-        indexList.addAll(indexSet.map { it.toInt() })
+    private fun initializeWordDatabase() {
+        db = WordRoomDatabase.getDatabase(applicationContext)
+    }
 
-        knownWordsCount = dataStore.data.map {
-            it[intPreferencesKey(knownWordsKey)] ?: 0
-        }.first()
+    private fun setupButtonListeners() {
+        buttonShowHiragana.setOnClickListener { showHiragana() }
+        buttonShowKorean.setOnClickListener { showKorean() }
+        buttonDontKnow.setOnClickListener { handleDontKnow() }
+        buttonKnow.setOnClickListener { handleKnow() }
+        buttonBack.setOnClickListener { finish() }
+    }
+
+    private fun showHiragana() {
+        textViewHiragana.text = wordById[currentIndex]?.hiragana ?: ""
+    }
+
+    private fun showKorean() {
+        textViewKorean.text = wordById[currentIndex]?.korean ?: ""
+    }
+
+    private fun handleDontKnow() {
+        indexList.add(currentIndex)
+        showNextWord()
+    }
+
+    private fun handleKnow() {
+        knownWordsCount++
+        updateCounter()
+        showNextWord()
+    }
+
+    private suspend fun loadWords() {
+        val indexSet =
+            dataStore.data.map { it[stringSetPreferencesKey(indexKey)] ?: emptySet() }.first()
+        indexList.addAll(indexSet.map { it.toInt() })
+        knownWordsCount = dataStore.data.map { it[intPreferencesKey(knownWordsKey)] ?: 0 }.first()
 
         val allWords = db.wordDao().getWordsByCategory(category.id)
         val words = allWords.drop(offset).take(limit).shuffled()
@@ -114,18 +118,15 @@ class WordLearningActivity : AppCompatActivity() {
             indexList.addAll(words.map { it.id })
         }
 
-        withContext(Dispatchers.Main) {
-            updateCounter()
-        }
-
-        showWord(isNext = false)
+        updateCounter()
+        showNextWord(isNext = false)
     }
 
     private fun updateCounter() {
-        textViewCounter.text = "$knownWordsCount/$limit"
+        runOnUiThread { textViewCounter.text = "$knownWordsCount/$limit" }
     }
 
-    private fun showWord(isNext: Boolean) {
+    private fun showNextWord(isNext: Boolean = true) {
         if (indexList.isEmpty()) {
             displayCompletionMessage()
             return
@@ -134,10 +135,9 @@ class WordLearningActivity : AppCompatActivity() {
         if (isNext) {
             indexList.removeAt(0)
         }
-        currentIndex = indexList.first()
-        val word = wordById[currentIndex]
 
-        displayWord(word)
+        currentIndex = indexList.first()
+        displayWord(wordById[currentIndex])
         saveProgress()
     }
 
