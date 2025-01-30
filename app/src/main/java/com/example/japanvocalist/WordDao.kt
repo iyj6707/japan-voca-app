@@ -9,6 +9,9 @@ interface WordDao {
     @Insert
     suspend fun insert(word: Word)
 
+    @Query("DELETE FROM words WHERE id = :id")
+    suspend fun deleteById(id: Int)
+
     @Query("SELECT COUNT(*) FROM words WHERE categoryId = :categoryId")
     suspend fun getCountByCategory(categoryId: Int): Int
 

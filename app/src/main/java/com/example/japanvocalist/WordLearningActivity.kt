@@ -2,6 +2,7 @@ package com.example.japanvocalist
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -28,6 +29,8 @@ class WordLearningActivity : AppCompatActivity() {
     private lateinit var buttonShowKorean: Button
     private lateinit var buttonDontKnow: Button
     private lateinit var buttonKnow: Button
+    private lateinit var buttonGotIt: Button
+    private lateinit var buttonHardToRemember: Button
     private lateinit var buttonBack: Button
     private lateinit var textViewCounter: TextView
     private lateinit var db: WordRoomDatabase
@@ -54,6 +57,14 @@ class WordLearningActivity : AppCompatActivity() {
         offset = intent.getIntExtra("OFFSET", 0)
         limit = intent.getIntExtra("LIMIT", 10)
 
+        if (category.id == HARD_TO_REMEMBER_CATEGORY_ID) {
+            buttonGotIt.visibility = View.VISIBLE
+            buttonHardToRemember.visibility = View.GONE
+        } else {
+            buttonGotIt.visibility = View.GONE
+            buttonHardToRemember.visibility = View.VISIBLE
+        }
+
         lifecycleScope.launch(Dispatchers.IO) {
             loadWords()
         }
@@ -69,6 +80,8 @@ class WordLearningActivity : AppCompatActivity() {
         buttonShowKorean = findViewById(R.id.buttonShowKorean)
         buttonDontKnow = findViewById(R.id.buttonDontKnow)
         buttonKnow = findViewById(R.id.buttonKnow)
+        buttonHardToRemember = findViewById(R.id.buttonHardToRemember)
+        buttonGotIt = findViewById(R.id.buttonGotIt)
         buttonBack = findViewById(R.id.buttonBack)
         textViewCounter = findViewById(R.id.textViewCounter)
     }
@@ -82,6 +95,8 @@ class WordLearningActivity : AppCompatActivity() {
         buttonShowKorean.setOnClickListener { showKorean() }
         buttonDontKnow.setOnClickListener { handleDontKnow() }
         buttonKnow.setOnClickListener { handleKnow() }
+        buttonHardToRemember.setOnClickListener { handleHardToRemember() }
+        buttonGotIt.setOnClickListener { handleGotIt() }
         buttonBack.setOnClickListener { finish() }
     }
 
@@ -104,6 +119,30 @@ class WordLearningActivity : AppCompatActivity() {
         showNextWord()
     }
 
+    private fun handleHardToRemember() {
+        indexList.add(currentIndex)
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.wordDao().insert(
+                Word(
+                    kanji = wordById[currentIndex]?.kanji ?: "",
+                    hiragana = wordById[currentIndex]?.hiragana ?: "",
+                    korean = wordById[currentIndex]?.korean ?: "",
+                    categoryId = HARD_TO_REMEMBER_CATEGORY_ID
+                )
+            )
+            showNextWord()
+        }
+    }
+
+    private fun handleGotIt() {
+        knownWordsCount++
+        updateCounter()
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.wordDao().deleteById(currentIndex)
+            showNextWord()
+        }
+    }
+
     private suspend fun loadWords() {
         val indexSet =
             dataStore.data.map { it[stringSetPreferencesKey(indexKey)] ?: emptySet() }.first()
@@ -123,17 +162,17 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private fun updateCounter() {
-        runOnUiThread { textViewCounter.text = "$knownWordsCount/$limit" }
+        runOnUiThread { textViewCounter.text = "$knownWordsCount/${wordById.size}" }
     }
 
     private fun showNextWord(isNext: Boolean = true) {
+        if (isNext) {
+            indexList.removeAt(0)
+        }
+
         if (indexList.isEmpty()) {
             displayCompletionMessage()
             return
-        }
-
-        if (isNext) {
-            indexList.removeAt(0)
         }
 
         currentIndex = indexList.first()

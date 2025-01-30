@@ -88,4 +88,18 @@
             android:layout_weight="1"
             android:text="알겠어요" />
     </LinearLayout>
+
+    <Button
+        android:id="@+id/buttonHardToRemember"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="외우기 어려워요" />
+
+    <Button
+        android:id="@+id/buttonGotIt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="이제 알겠어요" />
 </LinearLayout>

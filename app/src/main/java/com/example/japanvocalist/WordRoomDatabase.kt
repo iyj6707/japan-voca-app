@@ -42,6 +42,12 @@ abstract class WordRoomDatabase : RoomDatabase() {
                 super.onCreate(db)
                 INSTANCE?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
+                        database.categoryDao().insert(
+                            Category(
+                                id = HARD_TO_REMEMBER_CATEGORY_ID,
+                                name = "Hard to remember"
+                            )
+                        )
                         populateDatabaseFromCSV(
                             context.resources.openRawResource(R.raw.words).bufferedReader(),
                             database.wordDao(),
