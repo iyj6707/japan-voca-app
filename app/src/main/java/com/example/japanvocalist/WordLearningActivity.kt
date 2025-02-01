@@ -136,22 +136,25 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private suspend fun loadWords() {
-        val allWords = db.wordDao().getWordsByCategory(category.id)
-        val words = allWords.drop(offset).take(limit).shuffled()
-        wordById = words.associateBy { it.id }
+        initializeWordList()
 
         val indexSet =
             dataStore.data.map { it[stringSetPreferencesKey(indexKey)] ?: emptySet() }.first()
-        println("indexSet: $indexSet")
 
         if (indexSet.isNotEmpty()) {
             indexList.addAll(indexSet.map { it.toInt() })
         } else {
-            indexList.addAll(words.map { it.id })
+            indexList.addAll(wordById.keys)
         }
 
         updateCounter()
         showNextWord(isNext = false)
+    }
+
+    private suspend fun initializeWordList() {
+        val allWords = db.wordDao().getWordsByCategory(category.id)
+        val words = allWords.drop(offset).take(limit).shuffled()
+        wordById = words.associateBy { it.id }
     }
 
     private fun updateCounter() {
@@ -225,6 +228,7 @@ class WordLearningActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch(Dispatchers.IO) {
+            initializeWordList()
             showNextWord(isNext = false)
         }
     }
