@@ -22,5 +22,6 @@
         </activity>
         <activity android:name=".WordRangeActivity" />
         <activity android:name=".WordLearningActivity" />
+        <activity android:name=".WordEditingActivity" />
     </application>
 </manifest>

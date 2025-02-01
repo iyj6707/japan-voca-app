@@ -1,18 +1,20 @@
 package com.example.japanvocalist
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.lifecycle.lifecycleScope
 import com.example.japanvocalist.MainActivity.Companion.dataStore
+import com.example.japanvocalist.MainActivity.Companion.db
 import com.example.japanvocalist.util.buildIndexKey
-import com.example.japanvocalist.util.buildKnownWordsKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -33,7 +35,6 @@ class WordLearningActivity : AppCompatActivity() {
     private lateinit var buttonHardToRemember: Button
     private lateinit var buttonBack: Button
     private lateinit var textViewCounter: TextView
-    private lateinit var db: WordRoomDatabase
     private lateinit var category: CategoryDto
 
     private var offset by Delegates.notNull<Int>()
@@ -41,17 +42,14 @@ class WordLearningActivity : AppCompatActivity() {
     private var currentIndex by Delegates.notNull<Int>()
 
     private var wordById = mapOf<Int, Word>()
-    private var knownWordsCount = 0
     private val indexList = mutableListOf<Int>()
 
     private val indexKey: String by lazy { buildIndexKey(category.id, offset) }
-    private val knownWordsKey: String by lazy { buildKnownWordsKey(category.id, offset) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_learning)
         initializeUIComponents()
-        initializeWordDatabase()
 
         category = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java) ?: return
         offset = intent.getIntExtra("OFFSET", 0)
@@ -86,10 +84,6 @@ class WordLearningActivity : AppCompatActivity() {
         textViewCounter = findViewById(R.id.textViewCounter)
     }
 
-    private fun initializeWordDatabase() {
-        db = WordRoomDatabase.getDatabase(applicationContext)
-    }
-
     private fun setupButtonListeners() {
         buttonShowHiragana.setOnClickListener { showHiragana() }
         buttonShowKorean.setOnClickListener { showKorean() }
@@ -114,9 +108,8 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private fun handleKnow() {
-        knownWordsCount++
-        updateCounter()
         showNextWord()
+        updateCounter()
     }
 
     private fun handleHardToRemember() {
@@ -135,7 +128,6 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private fun handleGotIt() {
-        knownWordsCount++
         updateCounter()
         lifecycleScope.launch(Dispatchers.IO) {
             db.wordDao().deleteById(currentIndex)
@@ -144,16 +136,17 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private suspend fun loadWords() {
-        val indexSet =
-            dataStore.data.map { it[stringSetPreferencesKey(indexKey)] ?: emptySet() }.first()
-        indexList.addAll(indexSet.map { it.toInt() })
-        knownWordsCount = dataStore.data.map { it[intPreferencesKey(knownWordsKey)] ?: 0 }.first()
-
         val allWords = db.wordDao().getWordsByCategory(category.id)
         val words = allWords.drop(offset).take(limit).shuffled()
         wordById = words.associateBy { it.id }
 
-        if (indexList.isEmpty()) {
+        val indexSet =
+            dataStore.data.map { it[stringSetPreferencesKey(indexKey)] ?: emptySet() }.first()
+        println("indexSet: $indexSet")
+
+        if (indexSet.isNotEmpty()) {
+            indexList.addAll(indexSet.map { it.toInt() })
+        } else {
             indexList.addAll(words.map { it.id })
         }
 
@@ -162,7 +155,9 @@ class WordLearningActivity : AppCompatActivity() {
     }
 
     private fun updateCounter() {
-        runOnUiThread { textViewCounter.text = "$knownWordsCount/${wordById.size}" }
+        runOnUiThread {
+            textViewCounter.text = "${wordById.size - indexList.size}/${wordById.size}"
+        }
     }
 
     private fun showNextWord(isNext: Boolean = true) {
@@ -205,8 +200,32 @@ class WordLearningActivity : AppCompatActivity() {
             dataStore.edit { preferences ->
                 preferences[stringSetPreferencesKey(indexKey)] =
                     indexList.map { it.toString() }.toSet()
-                preferences[intPreferencesKey(knownWordsKey)] = knownWordsCount
             }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.word_learning_menu_options, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_edit_word -> {
+                val intent = Intent(this@WordLearningActivity, WordEditingActivity::class.java)
+                intent.putExtra("WORD_ID", currentIndex)
+                startActivity(intent)
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(Dispatchers.IO) {
+            showNextWord(isNext = false)
         }
     }
 }

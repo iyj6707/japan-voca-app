@@ -15,6 +15,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.lifecycle.lifecycleScope
 import com.example.japanvocalist.MainActivity.Companion.dataStore
+import com.example.japanvocalist.MainActivity.Companion.db
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -26,7 +27,6 @@ import kotlin.properties.Delegates
 class WordRangeActivity : AppCompatActivity() {
 
     private lateinit var buttonBack: Button
-    private lateinit var db: WordRoomDatabase
     private lateinit var listViewRanges: ListView
     private lateinit var categoryDto: CategoryDto
     private var rangeStep by Delegates.notNull<Int>()
@@ -36,7 +36,6 @@ class WordRangeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_word_range)
 
-        db = WordRoomDatabase.getDatabase(applicationContext)
         buttonBack = findViewById(R.id.buttonBack)
         listViewRanges = findViewById(R.id.listViewRanges)
         categoryDto = intent.getParcelableExtra("CATEGORY", CategoryDto::class.java)!!

@@ -22,16 +22,16 @@ import java.io.InputStreamReader
 class MainActivity : AppCompatActivity() {
     companion object {
         val Context.dataStore by preferencesDataStore(name = "settings")
+        lateinit var db: WordRoomDatabase
     }
 
-    private lateinit var db: WordRoomDatabase
     private lateinit var categoryAdapter: CategoryAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        db = WordRoomDatabase.getDatabase(applicationContext)
+        db = WordRoomDatabase.getDatabase(this)
 
         setupListView()
         observeCategories()
